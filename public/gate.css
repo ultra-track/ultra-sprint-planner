@@ -10,3 +10,15 @@
 #gate h1{color:#5F6066;font-size:18px;letter-spacing:.12em;margin:10px 0 12px}
 #gate .gbox{border-top:4px solid #E10F1A}
 #gate .gbtn{border-color:#111}
+
+#gate{background:#fff;background-image:repeating-linear-gradient(100deg,transparent 0 88px,rgba(225,15,26,.07) 88px 91px,transparent 91px 96px,rgba(17,17,17,.05) 96px 98px);}
+#gate::before{content:"";position:fixed;left:-10%;right:-10%;bottom:-140px;height:280px;background:radial-gradient(ellipse at center,rgba(225,15,26,.10),transparent 70%);pointer-events:none}
+#gate .gbox{position:relative;backdrop-filter:blur(2px);box-shadow:0 18px 50px rgba(0,0,0,.12)}
+#gate .ghello{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:28px;text-transform:uppercase;letter-spacing:.02em;margin:6px 0 2px;color:#111}
+#gate .glead{margin:0 0 6px;color:#333}
+#gate .gbtn{background:#111;color:#fff;border-color:#111;font-size:17px;padding:14px}
+#gate .gbtn:hover{background:#E10F1A;border-color:#E10F1A}
+#gate .gsmall a{color:#E10F1A;font-weight:600}
+#gate .glang{display:flex;gap:6px;justify-content:center;margin-top:10px}
+#gate .glang button{border:1px solid #d0d4db;background:#fff;border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer;color:#555}
+#gate .glang button[aria-pressed="true"]{background:#111;color:#fff;border-color:#111}

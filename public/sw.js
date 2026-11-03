@@ -1,5 +1,5 @@
 /* ULTRA Sprint Planner · service worker: l'app si apre anche senza rete (ultima versione scaricata). */
-const C="ultra-v41";
+const C="ultra-v43";
 const CORE=["./","index.html","shim.js","config.js","gate.css","fonts.css","vendor/supabase.js","ultra-logo.png","icon-192.png","manifest.webmanifest"];
 self.addEventListener("install",e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(CORE)).catch(()=>{}).then(()=>self.skipWaiting()))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
