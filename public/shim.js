@@ -32,7 +32,7 @@ async function loadProfile(){const key="ultra.prof."+session.user.id;for(let k=0
   if(res&&res.data){profile=res.data;try{localStorage.setItem(key,JSON.stringify(profile))}catch(_){}return}
   if(res&&res.error&&isNet(res.error)){try{const c=JSON.parse(localStorage.getItem(key)||"null");if(c){profile=c;setOff(true);return}}catch(_){}}
   await new Promise(r=>setTimeout(r,600))}}
-async function start(s){session=s;if(!session){loginView();return}await loadProfile();if(!profile||profile.role==="pending"){pendingView();return}gateOff();readyRes()}
+async function start(s){session=s;if(!session){loginView();return}await loadProfile();if(!profile){try{await sb.rpc("ensure_profile");await loadProfile()}catch(_){}}if(!profile||profile.role==="pending"){pendingView();return}gateOff();readyRes()}
 sb.auth.onAuthStateChange((ev,s)=>{if(ev==="SIGNED_OUT"){location.reload();return}if(ev==="SIGNED_IN"&&!session)start(s)});
 const domReady=new Promise(r=>document.readyState==="loading"?document.addEventListener("DOMContentLoaded",r,{once:true}):r());
 sb.auth.getSession().then(async({data})=>{await domReady;start(data.session)});
