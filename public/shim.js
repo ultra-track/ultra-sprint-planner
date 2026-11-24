@@ -66,7 +66,20 @@ const clone=o=>o==null?o:JSON.parse(JSON.stringify(o));
 const snap=(id,d)=>({id,exists:d!==undefined&&d!==null,data:()=>clone(d)??undefined,metadata:{}});
 const emit=(col,id)=>{for(const s of subs.slice())if(s.col===col&&(!s.id||s.id===id))try{s.fire()}catch(e){console.error(e)}};
 const errOf=e=>{const m=String(e?.message||e||"");const x=new Error(m);x.code=/row-level|permission|42501|not allowed/i.test(m+String(e?.code||""))?"invalid_argument":(/not_found|P0002/.test(m+String(e?.code||""))?"not_found":"unknown");return x};
-function realtime(){if(rt)return;rt=true;sb.channel("docs-rt").on("postgres_changes",{event:"*",schema:"public",table:"docs"},p=>{const r=(p.new&&p.new.col)?p.new:p.old;if(!r||!cache[r.col])return;if(p.eventType==="DELETE")cache[r.col].delete(r.id);else cache[r.col].set(r.id,p.new.data);emit(r.col,r.id)}).subscribe()}
+let CH=null,RT_OK=false,lastHidden=0,refreshing=false,lastRefresh=0;
+function realtime(){if(rt)return;rt=true;CH=sb.channel("docs-rt-"+Date.now()).on("postgres_changes",{event:"*",schema:"public",table:"docs"},p=>{const r=(p.new&&p.new.col)?p.new:p.old;if(!r||!cache[r.col])return;if(p.eventType==="DELETE")cache[r.col].delete(r.id);else cache[r.col].set(r.id,p.new.data);emit(r.col,r.id)}).subscribe(st=>{RT_OK=st==="SUBSCRIBED";if(st==="CHANNEL_ERROR"||st==="TIMED_OUT"||st==="CLOSED"){setTimeout(resub,4000)}})}
+/* v61: se la connessione in tempo reale cade (telefono in standby, rete che cambia) ricarico i dati e mi ricollego */
+function resub(){if(RT_OK||!session)return;try{CH&&sb.removeChannel(CH)}catch(e){}CH=null;rt=false;realtime();refreshAll()}
+async function refreshAll(force){if(refreshing||!navigator.onLine||!session)return;if(!force&&Date.now()-lastRefresh<5000)return;if(qGet().length){flush();return}refreshing=true;lastRefresh=Date.now();
+  try{for(const c of Object.keys(cache)){const m=cache[c];if(m.__full){const nm=new Map();let from=0,ok=true;for(;;){let res;try{res=await sb.from("docs").select("id,data").eq("col",c).range(from,from+999)}catch(e){res={error:e}}if(res.error){ok=false;break}for(const r of res.data)nm.set(r.id,r.data);if(res.data.length<1000)break;from+=1000}
+      if(!ok)continue;let ch=nm.size!==m.size;if(!ch)for(const [id,d] of nm){if(JSON.stringify(m.get(id))!==JSON.stringify(d)){ch=true;break}}if(ch){nm.__full=true;cache[c]=nm;applyQueue(c);for(const s of subs.slice())if(s.col===c)try{s.fire()}catch(e){console.error(e)}}}
+    else{const ids=[...new Set(subs.filter(s=>s.col===c&&s.id).map(s=>s.id))];if(!ids.length)continue;let res;try{res=await sb.from("docs").select("id,data").eq("col",c).in("id",ids)}catch(e){continue}if(res.error)continue;for(const r of res.data||[]){if(JSON.stringify(m.get(r.id))!==JSON.stringify(r.data)){m.set(r.id,r.data);emit(c,r.id)}}}}
+    persist()}catch(e){console.warn("refresh",e)}finally{refreshing=false}}
+document.addEventListener("visibilitychange",()=>{if(document.hidden){lastHidden=Date.now();return}if(Date.now()-lastHidden>15000){refreshAll();if(!RT_OK)resub()}});
+window.addEventListener("online",()=>setTimeout(()=>refreshAll(true),1500));
+window.addEventListener("pageshow",e=>{if(e.persisted)refreshAll(true)});
+setInterval(()=>{if(!document.hidden&&!RT_OK&&session)refreshAll()},90000);
+window.__ultraRefresh=()=>refreshAll(true);
 async function loadCol(col){if(cache[col]&&cache[col].__full)return;const m=cache[col]||new Map();let from=0;
   try{for(;;){let res;try{res=await sb.from("docs").select("id,data").eq("col",col).range(from,from+999)}catch(e){res={error:e}}const {data,error}=res;if(error)throw error;for(const r of data)m.set(r.id,r.data);if(data.length<1000)break;from+=1000}}
   catch(e){if(isNet(e)&&fromLocal(col)){setOff(true);applyQueue(col);return}throw errOf(e)}
